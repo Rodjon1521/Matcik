@@ -227,7 +227,7 @@ GameObject:
   - component: {fileID: 426983587}
   - component: {fileID: 426983586}
   - component: {fileID: 426983585}
-  - component: {fileID: 426983588}
+  - component: {fileID: 426983589}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -301,7 +301,7 @@ Transform:
   - {fileID: 861565517}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &426983588
+--- !u!114 &426983589
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -310,12 +310,17 @@ MonoBehaviour:
   m_GameObject: {fileID: 426983584}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ec7aab7973efb8f48972c0cbdd64119c, type: 3}
+  m_Script: {fileID: 11500000, guid: 0b0461747d10edf468aa97ad11fb3ab1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  speed: 50
+  type: 1
+  mr: {fileID: 0}
+  healedMat: {fileID: 0}
+  notHealedMat: {fileID: 0}
   rotationSpeed: 350
+  speed: 50
   potionsCount: 0
+  isHealed: 1
 --- !u!1 &482013874
 GameObject:
   m_ObjectHideFlags: 0
@@ -345,13 +350,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0a43c7b70f15b5e418515ecd472777a0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  potionPrefab: {fileID: 2486014478648759305, guid: 179fb4b34bff5e147a124fe320ed455c, type: 3}
-  zombiePrefab: {fileID: 842906868633324164, guid: 525d5131eee4d7d4eb57cef434303e0b, type: 3}
-  player: {fileID: 426983588}
+  potionPrefab: {fileID: 7095837843045698077, guid: 179fb4b34bff5e147a124fe320ed455c, type: 3}
+  zombiePrefab: {fileID: 4281932556136019532, guid: 525d5131eee4d7d4eb57cef434303e0b, type: 3}
+  player: {fileID: 426983589}
+  potionSpawnInterval: 5
+  zombieSpawnInterval: 1
   potionSpawnT: 0
   zombieSpawnT: 0
-  potions: []
-  zombies: []
+  entities: []
 --- !u!4 &482013876
 Transform:
   m_ObjectHideFlags: 0
@@ -453,7 +459,7 @@ Transform:
   m_GameObject: {fileID: 861565514}
   serializedVersion: 2
   m_LocalRotation: {x: 0.25298247, y: -0, z: -0, w: 0.9674709}
-  m_LocalPosition: {x: 0.07, y: 4.13, z: -8}
+  m_LocalPosition: {x: 0.07, y: 9.24, z: -10.35}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

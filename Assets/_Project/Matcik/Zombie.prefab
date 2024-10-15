@@ -221,8 +221,7 @@ GameObject:
   - component: {fileID: 6495326054334086054}
   - component: {fileID: 8365906643010469475}
   - component: {fileID: 730517540161944124}
-  - component: {fileID: 3059549443013463049}
-  - component: {fileID: 842906868633324164}
+  - component: {fileID: 4281932556136019532}
   m_Layer: 0
   m_Name: Zombie
   m_TagString: Untagged
@@ -298,30 +297,7 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!136 &3059549443013463049
-CapsuleCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7029484091897933338}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 2
-  m_Radius: 0.5
-  m_Height: 2
-  m_Direction: 1
-  m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &842906868633324164
+--- !u!114 &4281932556136019532
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -330,14 +306,17 @@ MonoBehaviour:
   m_GameObject: {fileID: 7029484091897933338}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: aa014cd9dfb7ffc4d998672d50722d8e, type: 3}
+  m_Script: {fileID: 11500000, guid: 0b0461747d10edf468aa97ad11fb3ab1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isHealed: 0
-  speed: 10
+  type: 2
   mr: {fileID: 730517540161944124}
   healedMat: {fileID: 2100000, guid: a8a559a807b049f4cb2ec502096a4a02, type: 2}
   notHealedMat: {fileID: 2100000, guid: 89ec8cf54f5462e44b5d255412d04070, type: 2}
+  rotationSpeed: 0
+  speed: 10
+  potionsCount: 0
+  isHealed: 0
 --- !u!1 &8485917563142425573
 GameObject:
   m_ObjectHideFlags: 0

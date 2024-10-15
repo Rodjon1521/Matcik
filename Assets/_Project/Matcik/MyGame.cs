@@ -1,166 +1,229 @@
 using UnityEngine;
+using System;
 using System.Collections.Generic;
-using UnityEditor;
+using Random = UnityEngine.Random;
 public class MyGame : MonoBehaviour
 {
-    public HealPotion potionPrefab;
-    public Zombie zombiePrefab;
-    public Player player;
+    public Entity potionPrefab;
+    public Entity zombiePrefab;
+    public Entity player;
+    public float potionSpawnInterval;
+    public float zombieSpawnInterval;
     public float potionSpawnT;
-    public float zombieSpawnT;  
- 
+    public float zombieSpawnT;
 
-    public List<HealPotion> potions = new(10);
-    public List<Zombie> zombies = new(10);
+    public List<Entity> entities = new(256);
 
     public void Start()
     {
         player.transform.position = new Vector3(0, 0, -2);
+        entities.Add(player);
     }
-
-    // Healed zombies search for potions too
 
     public void Update()
     {
         UpdateInput();
         UpdatePotions();
         UpdateZombies();
-        
+    }
+
+    public List<Entity> GetEntitiesOfType(EntityType type)
+    {
+        List<Entity> result = new(entities.Count);
+        for (int i = 0; i < entities.Count; i++)
+        {
+            if ((entities[i].type & type) != 0)
+            {
+                result.Add(entities[i]);
+            }
+        }
+
+        return result;
+    }
+
+    public Entity FindNearestEntity(Entity e, List<Entity> others, Func<Entity, bool> SomeFunction = null)
+    {
+        Entity nearestEntity = null;
+        float minDistance = float.MaxValue;
+
+        for (int i = 0; i < others.Count; i++)
+        {
+            if (others[i] != e && (SomeFunction == null || SomeFunction(others[i])))
+            {
+                float distance = Vector3.Distance(e.transform.position, others[i].transform.position);
+                if (distance < minDistance)
+                {
+                    minDistance = distance;
+                    nearestEntity = others[i];
+                }
+            }
+        }
+
+        return nearestEntity;
     }
 
     public void UpdateZombies()
     {
-        zombieSpawnT -= Time.deltaTime;
+        List<Entity> zombies = GetEntitiesOfType(EntityType.Zombie);
+        List<Entity> potions = GetEntitiesOfType(EntityType.Potion);
 
-        if (zombieSpawnT <= 0 && zombies.Count < 10)
+        if (zombies.Count < 10)
         {
-            zombieSpawnT += 1;
-            Zombie zombie = SpawnZombie();
-            zombies.Add(zombie);                  
+            zombieSpawnT -= Time.deltaTime;
+
+            if (zombieSpawnT <= 0)
+            {
+                zombieSpawnT += zombieSpawnInterval;
+                Entity zombie = SpawnEntity(zombiePrefab);
+                // TODO(sqd): Randomize speed
+                zombies.Add(zombie);
+            }
         }
-        else if (zombies.Count >= 10)
-        {           
-            zombieSpawnT = 1;
-        }
+
 
         for (int i = 0; i < zombies.Count; i++)
         {
             // NOTE(sqd): Update every zombie           
-            Zombie zombie = zombies[i];
+            Entity zombie = zombies[i];
 
-
-            if (zombie.isHealed && zombie.hasPotion)
+            // NOTE(sqd): Heal other zombies
+            if (zombie.isHealed)
             {
-                HealOtherZombies(zombie);
-            }
-            else
-            {
-                if(!zombie.hasPotion && zombie.isHealed)
-        {
-                    HealPotion nearestPotion = FindNearestPotion(zombie);                                                                                          
-                // Поиск ближайшего зелья                                                                                   
-               // Если найдено ближайшее зелье, зомби двигается к нему
-            
-            if (nearestPotion != null)
-            {
-                zombie.transform.LookAt(nearestPotion.transform);
-                float moveDistance = zombie.speed * Time.deltaTime;
-                zombie.transform.position += zombie.transform.forward * moveDistance;
-
-                // Если зомби достигает зелья, оно уничтожается
-                if (Vector3.Distance(zombie.transform.position, nearestPotion.transform.position) < 1.5f)
+                if (zombie.HasPotion())
                 {
-                    GameObject.Destroy(nearestPotion.gameObject);
-                    potions.Remove(nearestPotion);
-                    zombie.hasPotion = true;
+                    Entity nearestZombie = FindNearestEntity(zombie, zombies, (Entity e) => !e.isHealed);
+
+                    if (nearestZombie != null)
+                    {
+                        zombie.transform.LookAt(nearestZombie.transform);
+                        float moveDistance = zombie.speed * Time.deltaTime;
+                        zombie.transform.position += zombie.transform.forward * moveDistance;
+
+                        if (Vector3.Distance(zombie.transform.position, nearestZombie.transform.position) < 1.5f)
+                        {
+                            EntityHealEntity(zombie, nearestZombie);
+                        }
+                    }
+                }
+                else
+                {
+                    Entity nearestPotion = FindNearestEntity(zombie, potions);
+
+                    if (nearestPotion != null)
+                    {
+                        zombie.transform.LookAt(nearestPotion.transform);
+                        float moveDistance = zombie.speed * Time.deltaTime;
+                        zombie.transform.position += zombie.transform.forward * moveDistance;
+
+                        if (Vector3.Distance(zombie.transform.position, nearestPotion.transform.position) < 1.5f)
+                        {
+                            KillEntity(nearestPotion);
+                            zombie.potionsCount++;
+                        }
+                    }
                 }
             }
-        }           
             else
             {
-                zombie.transform.LookAt(player.transform);
-
-                float moveDistance = zombie.speed * Time.deltaTime;
-                zombie.transform.position += zombie.transform.forward * moveDistance;
-
-                // NOTE(sqd): Check if player near by
-                if (Vector3.Distance(player.transform.position, zombie.transform.position) < 3)
+                List<Entity> entitiesToFilter = GetEntitiesOfType(EntityType.Player | EntityType.Zombie);
+                Entity entityToFollow = FindNearestEntity(zombie, entitiesToFilter, (Entity e) => e.isHealed);
+                if (entityToFollow != null)
                 {
-                    if (player.potionsCount > 0)
+                    zombie.transform.LookAt(entityToFollow.transform);
+
+                    float moveDistance = zombie.speed * Time.deltaTime;
+                    zombie.transform.position += zombie.transform.forward * moveDistance;
+
+                    // NOTE(sqd): Check if player near by
+                    if (Vector3.Distance(entityToFollow.transform.position, zombie.transform.position) < 3)
                     {
-                        player.potionsCount--;
-                        zombie.isHealed = true;
-                        zombie.mr.sharedMaterial = zombie.healedMat;
-                    }
-                    else
-                    {
-                        Die(player);
+                        if (entityToFollow.potionsCount > 0)
+                        {
+                            EntityHealEntity(entityToFollow, zombie);
+                        }
+                        else
+                        {
+                            if (entityToFollow.type == EntityType.Player)
+                            {
+                                // TODO(sqd): Make player death
+                            }
+                            else
+                            {
+                                EntityInfectEntity(zombie, entityToFollow);
+                            }
+                        }
                     }
                 }
             }
         }
     }
-}
-        
-    
 
-    public void Die(Player player)
+    public void EntityInfectEntity(Entity e, Entity entityToInfect)
+    {
+        entityToInfect.isHealed = false;
+        entityToInfect.speed /= 2;
+        entityToInfect.mr.sharedMaterial = entityToInfect.notHealedMat;
+    }
+
+    public void EntityHealEntity(Entity e, Entity entityToHeal)
+    {
+        e.potionsCount--;
+        entityToHeal.isHealed = true;
+        entityToHeal.speed *= 2;
+        entityToHeal.mr.sharedMaterial = entityToHeal.healedMat;
+    }
+
+    public void Die(Entity player)
     {
         Debug.LogWarning("You are dead");
     }
 
     public void UpdatePotions()
     {
+        List<Entity> potions = GetEntitiesOfType(EntityType.Potion);
         // NOTE(sqd): Spawn potions
-        potionSpawnT -= Time.deltaTime;
-
-        if (potionSpawnT <= 0 && potions.Count < 10)
+        if (potions.Count < 10)
         {
-            potionSpawnT += 1;
-            HealPotion potion = SpawnPotion();
-            potions.Add(potion);
-        }
-        else if (potions.Count >= 10)
-        {            
-            potionSpawnT = 1;
+            potionSpawnT -= Time.deltaTime;
+
+            if (potionSpawnT <= 0)
+            {
+                potionSpawnT += potionSpawnInterval;
+                Entity potion = SpawnEntity(potionPrefab);
+            }
         }
 
         // NOTE(sqd): Rotate potions over time
         for (int i = 0; i < potions.Count; i++)
         {
-            potions[i].transform.Rotate(0, 30 * Time.deltaTime, 0);
+            potions[i].transform.Rotate(0, potions[i].rotationSpeed * Time.deltaTime, 0);
 
             // NOTE(sqd): Check if player near by
             if (Vector3.Distance(player.transform.position, potions[i].transform.position) < 5)
             {
-                GameObject.Destroy(potions[i].gameObject);
+                KillEntity(potions[i]);
+                // TODO(sqd): Should we remove potion from potions list?
                 player.potionsCount++;
-                potions.RemoveAt(i);
-                i--;
             }
         }
     }
 
-    public HealPotion SpawnPotion()
+    public Entity SpawnEntity(Entity prefab)
     {
         float randomX = Random.Range(-100, 100);
         float randomZ = Random.Range(-100, 100);
         Vector3 randomPosition = new Vector3(randomX, 0, randomZ);
 
-        HealPotion healPotion = Instantiate(potionPrefab, randomPosition, Quaternion.identity);
+        Entity result = Instantiate(prefab, randomPosition, Quaternion.identity);
+        entities.Add(result);
 
-        return healPotion;
+        return result;
     }
 
-    public Zombie SpawnZombie()
+    public void KillEntity(Entity e)
     {
-        float randomX = Random.Range(-100, 100);
-        float randomZ = Random.Range(-100, 100);
-        Vector3 randomPosition = new Vector3(randomX, 0, randomZ);
-
-        Zombie zombie = Instantiate(zombiePrefab, randomPosition, Quaternion.identity);
-
-        return zombie;
+        GameObject.Destroy(e.gameObject);
+        entities.Remove(e);
     }
 
     public void UpdateInput()
@@ -191,42 +254,7 @@ public class MyGame : MonoBehaviour
         if (Input.GetKey(KeyCode.Q))
         {
             player.transform.Rotate(0, -rotationY, 0);
-        }        
-    }
-    public HealPotion FindNearestPotion(Zombie zombie)
-    {
-        HealPotion nearestPotion = null;
-        float minDistance = float.MaxValue;
-
-        for (int i = 0; i < potions.Count; i++)
-        {
-            float distance = Vector3.Distance(zombie.transform.position, potions[i].transform.position);
-            if (distance < minDistance)
-            {
-                minDistance = distance;
-                nearestPotion = potions[i];
-            }
-        }
-
-        return nearestPotion;
-    }
-    public void HealOtherZombies(Zombie healedZombie)
-    {
-        for (int i = 0; i < zombies.Count; i++)
-        {
-            Zombie otherZombie = zombies[i];
-            if (!otherZombie.isHealed)
-            {
-                float distance = Vector3.Distance(healedZombie.transform.position, otherZombie.transform.position);
-                if (distance < 3) // Range within which a healed zombie can heal another one
-                {
-                    otherZombie.isHealed = true;
-                    otherZombie.mr.sharedMaterial = otherZombie.healedMat;
-                }
-            }
         }
     }
-
-
 
 }
