@@ -2,6 +2,7 @@ using UnityEngine;
 using System;
 using System.Collections.Generic;
 using Random = UnityEngine.Random;
+// ReSharper disable All
 public class MyGame : MonoBehaviour
 {
     public Entity potionPrefab;
@@ -11,6 +12,16 @@ public class MyGame : MonoBehaviour
     public float zombieSpawnInterval;
     public float potionSpawnT;
     public float zombieSpawnT;
+    
+    public float infectTimerT = 10f;
+    public bool isInfected = false;
+    
+    public bool inputEnabled = true;
+    public float inputDisableTimer = 3f;
+    
+    public KeyCode currentRandomKey;  
+    public float keyChangeInterval = 3f;  
+    public float keyChangeTimer = 0f;
 
     public List<Entity> entities = new(256);
 
@@ -22,9 +33,18 @@ public class MyGame : MonoBehaviour
 
     public void Update()
     {
-        UpdateInput();
+        if (inputEnabled)
+        {
+            UpdateInput();
+        }
+        if (!inputEnabled)
+        {
+            InfectedInput();
+        }
+
         UpdatePotions();
         UpdateZombies();
+        UpdateInfectionTimer();
     }
 
     public List<Entity> GetEntitiesOfType(EntityType type)
@@ -75,6 +95,7 @@ public class MyGame : MonoBehaviour
             {
                 zombieSpawnT += zombieSpawnInterval;
                 Entity zombie = SpawnEntity(zombiePrefab);
+                zombie.speed = Random.Range(10f, 25f);
                 // TODO(sqd): Randomize speed
                 zombies.Add(zombie);
             }
@@ -145,6 +166,8 @@ public class MyGame : MonoBehaviour
                         {
                             if (entityToFollow.type == EntityType.Player)
                             {
+                                isInfected = true;
+
                                 // TODO(sqd): Make player death
                             }
                             else
@@ -171,11 +194,6 @@ public class MyGame : MonoBehaviour
         entityToHeal.isHealed = true;
         entityToHeal.speed *= 2;
         entityToHeal.mr.sharedMaterial = entityToHeal.healedMat;
-    }
-
-    public void Die(Entity player)
-    {
-        Debug.LogWarning("You are dead");
     }
 
     public void UpdatePotions()
@@ -235,26 +253,116 @@ public class MyGame : MonoBehaviour
         {
             player.transform.position += player.transform.forward * moveDistance;
         }
+
         if (Input.GetKey(KeyCode.A))
         {
             player.transform.position -= player.transform.right * moveDistance;
         }
+
         if (Input.GetKey(KeyCode.S))
         {
             player.transform.position -= player.transform.forward * moveDistance;
         }
+
         if (Input.GetKey(KeyCode.D))
         {
             player.transform.position += player.transform.right * moveDistance;
         }
+
         if (Input.GetKey(KeyCode.E))
         {
             player.transform.Rotate(0, rotationY, 0);
         }
+
         if (Input.GetKey(KeyCode.Q))
         {
             player.transform.Rotate(0, -rotationY, 0);
         }
     }
 
+    public void UpdateInfectionTimer()
+    {
+        if (isInfected)
+        {
+
+            if (infectTimerT > 0)
+            {
+                infectTimerT -= Time.deltaTime;
+                inputDisableTimer -= Time.deltaTime;
+
+                if (inputDisableTimer <= 0)
+                {
+                    inputEnabled = !inputEnabled;
+                    inputDisableTimer = 3f;
+                }
+
+            }
+            else
+            {
+                isInfected = false;
+                infectTimerT = 10f;
+                inputEnabled = true;
+                Debug.Log("Player has survived the infection.");
+
+
+            }
+        }
+    }
+
+    public KeyCode[] keyArray = new KeyCode[]
+    {
+        KeyCode.W,
+        KeyCode.A,
+        KeyCode.S,
+        KeyCode.D,
+        KeyCode.E,
+        KeyCode.Q
+    };
+
+    public void InfectedInput()
+    {
+        float rotationY = player.rotationSpeed * Time.deltaTime;
+        float moveDistance = player.speed * Time.deltaTime;
+
+        keyChangeTimer -= Time.deltaTime;
+
+        
+        if (keyChangeTimer <= 0)
+        {
+            currentRandomKey = keyArray[Random.Range(0, keyArray.Length)];
+            keyChangeTimer = keyChangeInterval;  
+            Debug.Log("New random key: " + currentRandomKey);
+        }
+
+        
+        switch (currentRandomKey)
+
+        
+        {
+            case KeyCode.W:
+                player.transform.position += player.transform.forward * moveDistance;
+                Debug.Log("Random key: W");
+                break;
+            case KeyCode.A:
+                player.transform.position -= player.transform.right * moveDistance;
+                Debug.Log("Random key: A");
+                break;
+            case KeyCode.S:
+                player.transform.position -= player.transform.forward * moveDistance;
+                Debug.Log("Random key: S");
+                break;
+            case KeyCode.D:
+                player.transform.position += player.transform.right * moveDistance;
+                Debug.Log("Random key: D");
+                break;
+            case KeyCode.E:
+                player.transform.Rotate(0, rotationY, 0);
+                Debug.Log("Random key: E");
+                break;
+            case KeyCode.Q:
+                player.transform.Rotate(0, -rotationY, 0);
+                Debug.Log("Random key: Q");
+                break;
+        }
+    }
 }

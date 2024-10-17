@@ -2,6 +2,8 @@ using UnityEngine;
 using System;
 
 // NOTE(sqd): Sparse Entity System
+
+[Flags]
 public enum EntityType
 {
     None = 0,
@@ -23,6 +25,7 @@ public class Entity : MonoBehaviour
     [Header("Runtime")]
     public int potionsCount;
     public bool isHealed;
+    
 
     public bool HasPotion()
     {

@@ -357,7 +357,15 @@ MonoBehaviour:
   zombieSpawnInterval: 1
   potionSpawnT: 0
   zombieSpawnT: 0
+  infectTimerT: 10
+  isInfected: 0
+  inputEnabled: 1
+  inputDisableTimer: 3
+  currentRandomKey: 0
+  keyChangeInterval: 3
+  keyChangeTimer: 0
   entities: []
+  keyArray: 770000006100000073000000640000006500000071000000
 --- !u!4 &482013876
 Transform:
   m_ObjectHideFlags: 0
