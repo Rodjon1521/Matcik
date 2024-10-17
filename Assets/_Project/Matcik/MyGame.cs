@@ -12,15 +12,16 @@ public class MyGame : MonoBehaviour
     public float zombieSpawnInterval;
     public float potionSpawnT;
     public float zombieSpawnT;
+
     
     public float infectTimerT = 10f;
     public bool isInfected = false;
-    
+
     public bool inputEnabled = true;
     public float inputDisableTimer = 3f;
     
-    public KeyCode currentRandomKey;  
-    public float keyChangeInterval = 3f;  
+    public KeyCode currentRandomKey;
+    public float keyChangeInterval = 3f;
     public float keyChangeTimer = 0f;
 
     public List<Entity> entities = new(256);
@@ -37,7 +38,7 @@ public class MyGame : MonoBehaviour
         {
             UpdateInput();
         }
-        if (!inputEnabled)
+        else
         {
             InfectedInput();
         }
@@ -308,61 +309,70 @@ public class MyGame : MonoBehaviour
             }
         }
     }
+    
+    
 
-    public KeyCode[] keyArray = new KeyCode[]
+    public static KeyCode[] inputKeys = new[] { KeyCode.W, KeyCode.A, KeyCode.S, KeyCode.D, KeyCode.E, KeyCode.Q };
+    public static KeyCode[] infectedKeys;
+
+    public static KeyCode[] ShuffleArray(KeyCode[] array)
     {
-        KeyCode.W,
-        KeyCode.A,
-        KeyCode.S,
-        KeyCode.D,
-        KeyCode.E,
-        KeyCode.Q
-    };
+        KeyCode[] newArray = (KeyCode[])array.Clone();
+        int n = newArray.Length;
+
+        for (int i = n - 1; i > 0; i--)
+        {
+            int j = Random.Range(0, i + 1);
+            KeyCode temp = newArray[i];
+            newArray[i] = newArray[j];
+            newArray[j] = temp;
+        }
+
+        return newArray;
+    }
 
     public void InfectedInput()
     {
         float rotationY = player.rotationSpeed * Time.deltaTime;
         float moveDistance = player.speed * Time.deltaTime;
-
+        
         keyChangeTimer -= Time.deltaTime;
 
         
         if (keyChangeTimer <= 0)
         {
-            currentRandomKey = keyArray[Random.Range(0, keyArray.Length)];
-            keyChangeTimer = keyChangeInterval;  
-            Debug.Log("New random key: " + currentRandomKey);
+            keyChangeTimer = keyChangeInterval;
+            infectedKeys = ShuffleArray(inputKeys);
         }
 
-        
-        switch (currentRandomKey)
-
-        
+        if (Input.GetKey(infectedKeys[0]))
         {
-            case KeyCode.W:
-                player.transform.position += player.transform.forward * moveDistance;
-                Debug.Log("Random key: W");
-                break;
-            case KeyCode.A:
-                player.transform.position -= player.transform.right * moveDistance;
-                Debug.Log("Random key: A");
-                break;
-            case KeyCode.S:
-                player.transform.position -= player.transform.forward * moveDistance;
-                Debug.Log("Random key: S");
-                break;
-            case KeyCode.D:
-                player.transform.position += player.transform.right * moveDistance;
-                Debug.Log("Random key: D");
-                break;
-            case KeyCode.E:
-                player.transform.Rotate(0, rotationY, 0);
-                Debug.Log("Random key: E");
-                break;
-            case KeyCode.Q:
-                player.transform.Rotate(0, -rotationY, 0);
-                Debug.Log("Random key: Q");
-                break;
+            player.transform.position += player.transform.forward * moveDistance;
+        }
+
+        if (Input.GetKey(infectedKeys[1]))
+        {
+            player.transform.position -= player.transform.right * moveDistance;
+        }
+
+        if (Input.GetKey(infectedKeys[2]))
+        {
+            player.transform.position -= player.transform.forward * moveDistance;
+        }
+
+        if (Input.GetKey(infectedKeys[3]))
+        {
+            player.transform.position += player.transform.right * moveDistance;
+        }
+
+        if (Input.GetKey(infectedKeys[4]))
+        {
+            player.transform.Rotate(0, rotationY, 0);
+        }
+
+        if (Input.GetKey(infectedKeys[5]))
+        {
+            player.transform.Rotate(0, -rotationY, 0);
         }
     }
 }
