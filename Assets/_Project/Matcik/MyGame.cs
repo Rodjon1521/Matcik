@@ -23,24 +23,29 @@ public class MyGame : MonoBehaviour
     public KeyCode currentRandomKey;
     public float keyChangeInterval = 3f;
     public float keyChangeTimer = 0f;
+    
+    public float separationDistance = 10.0f;
+    public float alignmentWeight = 2.0f;
+    public float cohesionWeight = 1.5f;
+    public float separationWeight = 2.0f;
 
     public List<Entity> entities = new(256);
 
     public void Start()
     {
-        player.transform.position = new Vector3(0, 0, -2);
+        player.transform.position = new Vector3(0, 1, -2);
         entities.Add(player);
     }
 
     public void Update()
     {
-        if (inputEnabled)
+        if (inputEnabled == true)
         {
             UpdateInput();
         }
         else
         {
-            InfectedInput();
+            NewInfectedInput();
         }
 
         UpdatePotions();
@@ -82,7 +87,6 @@ public class MyGame : MonoBehaviour
 
         return nearestEntity;
     }
-
     public void UpdateZombies()
     {
         List<Entity> zombies = GetEntitiesOfType(EntityType.Zombie);
@@ -96,17 +100,60 @@ public class MyGame : MonoBehaviour
             {
                 zombieSpawnT += zombieSpawnInterval;
                 Entity zombie = SpawnEntity(zombiePrefab);
-                zombie.speed = Random.Range(10f, 25f);
-                // TODO(sqd): Randomize speed
                 zombies.Add(zombie);
             }
         }
 
-
+    
         for (int i = 0; i < zombies.Count; i++)
         {
             // NOTE(sqd): Update every zombie           
             Entity zombie = zombies[i];
+            
+            Vector3 separation = Vector3.zero;
+            Vector3 alignment = Vector3.zero;
+            Vector3 cohesion = Vector3.zero;
+            int neighborCount = 0;
+            for (int j = 0; j < zombies.Count; j++)
+            {
+                if (i != j)
+                {
+                    Entity neighbor = zombies[j];
+                    float distance = Vector3.Distance(zombie.transform.position, neighbor.transform.position);
+
+                    if (distance < separationDistance)
+                    {
+                        // Separation: отталкиваемся от других зомби
+                        separation += (zombie.transform.position - neighbor.transform.position).normalized / distance;
+                    }
+
+                    // Alignment: вычисляем среднее направление
+                    alignment += neighbor.transform.forward;
+
+                    // Cohesion: двигаемся к средней позиции соседей
+                    cohesion += neighbor.transform.position;
+
+                    neighborCount++;
+                }
+            }
+
+            if (neighborCount > 0)
+            {
+                // Средний вектор для выравнивания
+                alignment /= neighborCount;
+                alignment.Normalize();
+
+                // Средняя позиция для сцепления
+                cohesion /= neighborCount;
+                cohesion = (cohesion - zombie.transform.position).normalized;
+
+                // Применяем итоговые векторы с весами
+                Vector3 finalDirection = (separation * separationWeight) + (alignment * alignmentWeight) + (cohesion * cohesionWeight);
+                finalDirection.Normalize();
+
+                zombie.transform.LookAt(zombie.transform.position + finalDirection);
+                zombie.transform.position += finalDirection * zombie.speed * Time.deltaTime;
+            }
 
             // NOTE(sqd): Heal other zombies
             if (zombie.isHealed)
@@ -247,6 +294,8 @@ public class MyGame : MonoBehaviour
 
     public void UpdateInput()
     {
+        player.speed = 50f;
+        player.rotationSpeed = 200f;
         float rotationY = player.rotationSpeed * Time.deltaTime;
         float moveDistance = player.speed * Time.deltaTime;
 
@@ -298,16 +347,22 @@ public class MyGame : MonoBehaviour
                 }
 
             }
-            else
+            else if (!hasFallen)
             {
-                isInfected = false;
-                infectTimerT = 10f;
-                inputEnabled = true;
-                Debug.Log("Player has survived the infection.");
+                EnableFall();
 
+                // ragdoll death
 
             }
         }
+    }
+    public bool hasFallen = false;
+    void EnableFall()
+    {
+        player.GetComponent<Rigidbody>().isKinematic = false;
+        player.GetComponent<Rigidbody>().useGravity = true;
+        player.GetComponent<Rigidbody>().AddForce(Vector3.back * 5f, ForceMode.Impulse);
+        hasFallen = true;
     }
     
     
@@ -371,6 +426,43 @@ public class MyGame : MonoBehaviour
         }
 
         if (Input.GetKey(infectedKeys[5]))
+        {
+            player.transform.Rotate(0, -rotationY, 0);
+        }
+    }
+    public void NewInfectedInput()
+    {
+        player.speed = 15f;
+        player.rotationSpeed = 20f;
+        float rotationY = player.rotationSpeed * Time.deltaTime;
+        float moveDistance = player.speed * Time.deltaTime;
+
+        if (Input.GetKey(KeyCode.W))
+        {
+            player.transform.position += player.transform.forward * moveDistance;
+        }
+
+        if (Input.GetKey(KeyCode.A))
+        {
+            player.transform.position -= player.transform.right * moveDistance;
+        }
+
+        if (Input.GetKey(KeyCode.S))
+        {
+            player.transform.position -= player.transform.forward * moveDistance;
+        }
+
+        if (Input.GetKey(KeyCode.D))
+        {
+            player.transform.position += player.transform.right * moveDistance;
+        }
+
+        if (Input.GetKey(KeyCode.E))
+        {
+            player.transform.Rotate(0, rotationY, 0);
+        }
+
+        if (Input.GetKey(KeyCode.Q))
         {
             player.transform.Rotate(0, -rotationY, 0);
         }
