@@ -24,11 +24,6 @@ public class MyGame : MonoBehaviour
     public float keyChangeInterval = 3f;
     public float keyChangeTimer = 0f;
     
-    public float separationDistance = 10.0f;
-    public float alignmentWeight = 2.0f;
-    public float cohesionWeight = 1.5f;
-    public float separationWeight = 2.0f;
-
     public List<Entity> entities = new(256);
 
     public void Start()
@@ -51,6 +46,7 @@ public class MyGame : MonoBehaviour
         UpdatePotions();
         UpdateZombies();
         UpdateInfectionTimer();
+        Healing();
     }
 
     public List<Entity> GetEntitiesOfType(EntityType type)
@@ -88,146 +84,160 @@ public class MyGame : MonoBehaviour
         return nearestEntity;
     }
     public void UpdateZombies()
+{
+    List<Entity> zombies = GetEntitiesOfType(EntityType.Zombie);
+    List<Entity> potions = GetEntitiesOfType(EntityType.Potion);
+
+    if (zombies.Count < 10)
     {
-        List<Entity> zombies = GetEntitiesOfType(EntityType.Zombie);
-        List<Entity> potions = GetEntitiesOfType(EntityType.Potion);
+        zombieSpawnT -= Time.deltaTime;
 
-        if (zombies.Count < 10)
+        if (zombieSpawnT <= 0)
         {
-            zombieSpawnT -= Time.deltaTime;
-
-            if (zombieSpawnT <= 0)
-            {
-                zombieSpawnT += zombieSpawnInterval;
-                Entity zombie = SpawnEntity(zombiePrefab);
-                zombies.Add(zombie);
-            }
+            zombieSpawnT += zombieSpawnInterval;
+            Entity zombie = SpawnEntity(zombiePrefab,100f);
+            zombies.Add(zombie);
         }
+    }
 
-    
-        for (int i = 0; i < zombies.Count; i++)
+    for (int i = 0; i < zombies.Count; i++)
+    {
+        Entity zombie = zombies[i];
+
+        
+        if (zombie.isHealed)
         {
-            // NOTE(sqd): Update every zombie           
-            Entity zombie = zombies[i];
             
-            Vector3 separation = Vector3.zero;
-            Vector3 alignment = Vector3.zero;
-            Vector3 cohesion = Vector3.zero;
-            int neighborCount = 0;
-            for (int j = 0; j < zombies.Count; j++)
+            if (zombie.HasPotion())
             {
-                if (i != j)
+                Entity nearestZombie = FindNearestEntity(zombie, zombies, (Entity e) => !e.isHealed);
+
+                if (nearestZombie != null)
                 {
-                    Entity neighbor = zombies[j];
-                    float distance = Vector3.Distance(zombie.transform.position, neighbor.transform.position);
+                    zombie.transform.LookAt(nearestZombie.transform);
+                    float moveDistance = zombie.speed * Time.deltaTime;
+                    zombie.transform.position += zombie.transform.forward * moveDistance;
 
-                    if (distance < separationDistance)
+                    if (Vector3.Distance(zombie.transform.position, nearestZombie.transform.position) < 1.5f)
                     {
-                        // Separation: отталкиваемся от других зомби
-                        separation += (zombie.transform.position - neighbor.transform.position).normalized / distance;
-                    }
-
-                    // Alignment: вычисляем среднее направление
-                    alignment += neighbor.transform.forward;
-
-                    // Cohesion: двигаемся к средней позиции соседей
-                    cohesion += neighbor.transform.position;
-
-                    neighborCount++;
-                }
-            }
-
-            if (neighborCount > 0)
-            {
-                // Средний вектор для выравнивания
-                alignment /= neighborCount;
-                alignment.Normalize();
-
-                // Средняя позиция для сцепления
-                cohesion /= neighborCount;
-                cohesion = (cohesion - zombie.transform.position).normalized;
-
-                // Применяем итоговые векторы с весами
-                Vector3 finalDirection = (separation * separationWeight) + (alignment * alignmentWeight) + (cohesion * cohesionWeight);
-                finalDirection.Normalize();
-
-                zombie.transform.LookAt(zombie.transform.position + finalDirection);
-                zombie.transform.position += finalDirection * zombie.speed * Time.deltaTime;
-            }
-
-            // NOTE(sqd): Heal other zombies
-            if (zombie.isHealed)
-            {
-                if (zombie.HasPotion())
-                {
-                    Entity nearestZombie = FindNearestEntity(zombie, zombies, (Entity e) => !e.isHealed);
-
-                    if (nearestZombie != null)
-                    {
-                        zombie.transform.LookAt(nearestZombie.transform);
-                        float moveDistance = zombie.speed * Time.deltaTime;
-                        zombie.transform.position += zombie.transform.forward * moveDistance;
-
-                        if (Vector3.Distance(zombie.transform.position, nearestZombie.transform.position) < 1.5f)
-                        {
-                            EntityHealEntity(zombie, nearestZombie);
-                        }
-                    }
-                }
-                else
-                {
-                    Entity nearestPotion = FindNearestEntity(zombie, potions);
-
-                    if (nearestPotion != null)
-                    {
-                        zombie.transform.LookAt(nearestPotion.transform);
-                        float moveDistance = zombie.speed * Time.deltaTime;
-                        zombie.transform.position += zombie.transform.forward * moveDistance;
-
-                        if (Vector3.Distance(zombie.transform.position, nearestPotion.transform.position) < 1.5f)
-                        {
-                            KillEntity(nearestPotion);
-                            zombie.potionsCount++;
-                        }
+                        EntityHealEntity(zombie, nearestZombie);
                     }
                 }
             }
             else
             {
-                List<Entity> entitiesToFilter = GetEntitiesOfType(EntityType.Player | EntityType.Zombie);
-                Entity entityToFollow = FindNearestEntity(zombie, entitiesToFilter, (Entity e) => e.isHealed);
-                if (entityToFollow != null)
-                {
-                    zombie.transform.LookAt(entityToFollow.transform);
+                Entity nearestPotion = FindNearestEntity(zombie, potions);
 
+                if (nearestPotion != null)
+                {
+                    zombie.transform.LookAt(nearestPotion.transform);
                     float moveDistance = zombie.speed * Time.deltaTime;
                     zombie.transform.position += zombie.transform.forward * moveDistance;
 
-                    // NOTE(sqd): Check if player near by
-                    if (Vector3.Distance(entityToFollow.transform.position, zombie.transform.position) < 3)
+                    if (Vector3.Distance(zombie.transform.position, nearestPotion.transform.position) < 1.5f)
                     {
-                        if (entityToFollow.potionsCount > 0)
+                        KillEntity(nearestPotion);
+                        zombie.potionsCount++;
+                    }
+                }
+            }
+        }
+        else
+        {
+            List<Entity> entitiesToFilter = GetEntitiesOfType(EntityType.Player | EntityType.Zombie);
+            Entity entityToFollow = FindNearestEntity(zombie, entitiesToFilter, (Entity e) => e.isHealed);
+
+if (entityToFollow != null)
+{
+    // Вектор направления, куда двигаться зомби
+    Vector3 moveDirection = Vector3.zero;
+
+    // Применение правил flocking behavior
+    Vector3 separation = Vector3.zero;
+    Vector3 alignment = Vector3.zero;
+    Vector3 cohesion = Vector3.zero;
+
+    // Параметры для регулировки силы эффектов
+    float separationDistance = 10.0f;  // Минимальная дистанция между зомби
+    float alignmentWeight = 0f;     // Влияние выравнивания
+    float cohesionWeight = 0f;      // Влияние притяжения к соседям
+
+    // Найдём соседей для зомби
+    List<Entity> neighbors = new List<Entity>();
+    foreach (var entity in GetEntitiesOfType(EntityType.Zombie))
+    {
+        if (entity != zombie) // Убираем самого себя из списка соседей
+        {
+            neighbors.Add(entity);
+        }
+    }
+
+    foreach (var neighbor in neighbors)
+    {
+        float distanceToNeighbor = Vector3.Distance(zombie.transform.position, neighbor.transform.position);
+
+        // Правило разделения: избегаем других зомби
+        if (distanceToNeighbor < separationDistance)
+        {
+            separation += (zombie.transform.position - neighbor.transform.position).normalized / distanceToNeighbor;
+        }
+
+        // Правило выравнивания: стараемся двигаться в том же направлении, что и соседи
+        alignment += neighbor.transform.forward;
+
+        // Правило притяжения (cohesion): стремимся к средней позиции соседей
+        cohesion += neighbor.transform.position;
+    }
+
+    if (neighbors.Count > 0)
+    {
+        // Учитываем среднюю позицию для притяжения
+        cohesion /= neighbors.Count;
+        cohesion = (cohesion - zombie.transform.position).normalized;
+
+        // Учитываем направление движения соседей
+        alignment = alignment.normalized;
+    }
+
+    // Итоговое направление с учётом всех правил
+    moveDirection = separation.normalized * separationDistance + alignment * alignmentWeight + cohesion * cohesionWeight;
+
+    // Следование за игроком (EntityToFollow) как основное поведение
+    moveDirection += (entityToFollow.transform.position - zombie.transform.position).normalized;
+
+    // Нормализуем вектор для соблюдения скорости
+    moveDirection = moveDirection.normalized;
+
+    // Поворачиваем зомби в сторону движения
+    zombie.transform.LookAt(zombie.transform.position + moveDirection);
+
+    // Движение зомби
+    float moveDistance = zombie.speed * Time.deltaTime;
+    zombie.transform.position += moveDirection * moveDistance;
+
+                if (Vector3.Distance(entityToFollow.transform.position, zombie.transform.position) < 3)
+                {
+                    if (entityToFollow.potionsCount > 0)
+                    {
+                        EntityHealEntity(entityToFollow, zombie);
+                    }
+                    else
+                    {
+                        if (entityToFollow.type == EntityType.Player)
                         {
-                            EntityHealEntity(entityToFollow, zombie);
+                            isInfected = true;
+                            player.isHealed = false;
                         }
                         else
                         {
-                            if (entityToFollow.type == EntityType.Player)
-                            {
-                                isInfected = true;
-
-                                // TODO(sqd): Make player death
-                            }
-                            else
-                            {
-                                EntityInfectEntity(zombie, entityToFollow);
-                            }
+                            EntityInfectEntity(zombie, entityToFollow);
                         }
                     }
                 }
             }
         }
     }
+}
 
     public void EntityInfectEntity(Entity e, Entity entityToInfect)
     {
@@ -255,7 +265,7 @@ public class MyGame : MonoBehaviour
             if (potionSpawnT <= 0)
             {
                 potionSpawnT += potionSpawnInterval;
-                Entity potion = SpawnEntity(potionPrefab);
+                Entity potion = SpawnEntity(potionPrefab,20f);
             }
         }
 
@@ -274,12 +284,24 @@ public class MyGame : MonoBehaviour
         }
     }
 
-    public Entity SpawnEntity(Entity prefab)
+    public Entity SpawnEntity(Entity prefab,float minimumDistance = 70.0f)
     {
-        float randomX = Random.Range(-100, 100);
-        float randomZ = Random.Range(-100, 100);
-        Vector3 randomPosition = new Vector3(randomX, 0, randomZ);
+        Vector3 randomPosition;
+        float distanceToPlayer;
 
+        // Генерируем случайную позицию, пока она не будет на безопасном расстоянии от игрока
+        do
+        {
+            float randomX = Random.Range(-100, 100);
+            float randomZ = Random.Range(-100, 100);
+            randomPosition = new Vector3(randomX, 0, randomZ);
+        
+            // Вычисляем расстояние до игрока
+            distanceToPlayer = Vector3.Distance(randomPosition, player.transform.position);
+        } 
+        while (distanceToPlayer < minimumDistance); // Повторяем, пока позиция слишком близка к игроку
+
+        // Создаем зомби
         Entity result = Instantiate(prefab, randomPosition, Quaternion.identity);
         entities.Add(result);
 
@@ -354,6 +376,19 @@ public class MyGame : MonoBehaviour
                 // ragdoll death
 
             }
+        }
+    }
+
+    public void Healing()
+    {
+        if (isInfected && !player.isHealed && player.HasPotion())
+        {
+            isInfected = false;
+            player.potionsCount--;
+            player.isHealed = true;
+            inputDisableTimer = 3f;
+            inputEnabled = true;
+            infectTimerT = 10f;
         }
     }
     public bool hasFallen = false;
