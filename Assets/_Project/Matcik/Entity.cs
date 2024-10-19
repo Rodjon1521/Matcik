@@ -22,12 +22,13 @@ public class Entity : MonoBehaviour
     public float rotationSpeed;
     public float speed;
     public AudioClip deathSound;
-    
+    public Entity targetEntity;
+
+    public Vector3 moveDirection;
 
     [Header("Runtime")]
     public int potionsCount;
     public bool isHealed;
-    
 
     public bool HasPotion()
     {
@@ -38,22 +39,18 @@ public class Entity : MonoBehaviour
 // public void DoGame()
 // {
 //     GoToProstitutochnoyaFor(Sex);
-
 //     GoToProstitutochnoyaFor(Masturbation);
 // }
 
 // public bool GoToProstitutochnoyaFor(Func<bool> SomeFunction)
 // {
 //     PrepareForKonchit();
-
 //     bool isSuccess = SomeFunction();
-
 //     return isSuccess;
 // }
 
 // public void PrepareForKonchit()
 // {
-
 // }
 
 // public bool Sex()
