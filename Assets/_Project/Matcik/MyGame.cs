@@ -34,11 +34,11 @@ public class MyGame : MonoBehaviour
 
     public void Update()
     {
-        if (inputEnabled == true)
+        if (inputEnabled == true && !hasFallen)
         {
             UpdateInput();
         }
-        else
+        if (!inputEnabled && !hasFallen)
         {
             NewInfectedInput();
         }
@@ -392,13 +392,20 @@ if (entityToFollow != null)
         }
     }
     public bool hasFallen = false;
-    void EnableFall()
+    
+    
+    
+    public void EnableFall()
     {
         player.GetComponent<Rigidbody>().isKinematic = false;
         player.GetComponent<Rigidbody>().useGravity = true;
         player.GetComponent<Rigidbody>().AddForce(Vector3.back * 5f, ForceMode.Impulse);
+        player.GetComponent<AudioSource>().clip = player.deathSound;
+        player.GetComponent<AudioSource>().Play();
         hasFallen = true;
+        
     }
+    
     
     
 

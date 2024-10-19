@@ -21,6 +21,8 @@ public class Entity : MonoBehaviour
     public Material notHealedMat;
     public float rotationSpeed;
     public float speed;
+    public AudioClip deathSound;
+    
 
     [Header("Runtime")]
     public int potionsCount;
