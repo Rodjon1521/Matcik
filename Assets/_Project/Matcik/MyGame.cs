@@ -176,14 +176,12 @@ public class MyGame : MonoBehaviour
 
                     foreach (var neighbor in neighbors)
                     {
-                        float distanceToNeighbor =
-                            Vector3.Distance(zombie.transform.position, neighbor.transform.position);
+                        float distanceToNeighbor = Vector3.Distance(zombie.transform.position, neighbor.transform.position);
 
                         // Правило разделения: избегаем других зомби
                         if (distanceToNeighbor < separationDistance)
                         {
-                            separation += (zombie.transform.position - neighbor.transform.position).normalized /
-                                          distanceToNeighbor;
+                            separation += (zombie.transform.position - neighbor.transform.position).normalized / distanceToNeighbor;
                         }
 
                         // Правило выравнивания: стараемся двигаться в том же направлении, что и соседи
@@ -204,8 +202,7 @@ public class MyGame : MonoBehaviour
                     }
 
                     // Итоговое направление с учётом всех правил
-                    moveDirection = separation.normalized * separationDistance + alignment * alignmentWeight +
-                                    cohesion * cohesionWeight;
+                    moveDirection = separation.normalized * separationDistance + alignment * alignmentWeight + cohesion * cohesionWeight;
 
                     // Следование за игроком (EntityToFollow) как основное поведение
                     moveDirection += (entityToFollow.transform.position - zombie.transform.position).normalized;
