@@ -21,8 +21,9 @@ public class Entity : MonoBehaviour
     public Material notHealedMat;
     public float rotationSpeed;
     public float speed;
-    public AudioClip deathSound;
-    public Entity targetEntity;
+
+    public AudioSource DeathAudioSource;
+    public bool isDeath;
 
     public Vector3 moveDirection;
 

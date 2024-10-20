@@ -2,12 +2,13 @@ using UnityEngine;
 using System;
 using System.Collections.Generic;
 using Random = UnityEngine.Random;
+
 // ReSharper disable All
 public class MyGame : MonoBehaviour
 {
-    public float separationDistance = 10.0f;  // Минимальная дистанция между зомби
-    public float alignmentWeight = 10f;     // Влияние выравнивания
-    public float cohesionWeight = 10f;      // Влияние притяжения к соседям
+    public float separationDistance = 10.0f; // Минимальная дистанция между зомби
+    public float alignmentWeight = 10f; // Влияние выравнивания
+    public float cohesionWeight = 10f; // Влияние притяжения к соседям
     public Entity potionPrefab;
     public Entity zombiePrefab;
     public Entity player;
@@ -37,11 +38,12 @@ public class MyGame : MonoBehaviour
 
     public void Update()
     {
-        if (inputEnabled == true && !hasFallen)
+        if (inputEnabled && !player.isDeath)
         {
             UpdateInput();
         }
-        if (!inputEnabled && !hasFallen)
+
+        if (!inputEnabled && !player.isDeath)
         {
             NewInfectedInput();
         }
@@ -86,6 +88,7 @@ public class MyGame : MonoBehaviour
 
         return nearestEntity;
     }
+
     public void UpdateZombies()
     {
         List<Entity> zombies = GetEntitiesOfType(EntityType.Zombie);
@@ -147,25 +150,31 @@ public class MyGame : MonoBehaviour
                 Entity entityToFollow = FindNearestEntity(zombie, entitiesToFilter, (Entity e) => e.isHealed);
                 List<Entity> infectedEntities = GetEntitiesOfType(EntityType.Zombie, (e) => !e.isHealed);
                 FlockMove(zombie, entityToFollow, infectedEntities);
-
-                if (Vector3.Distance(zombie.transform.position, entityToFollow.transform.position) < 3)
+                if (entityToFollow != null)
                 {
-                    if (entityToFollow.potionsCount == 0)
+                    if (Vector3.Distance(zombie.transform.position, entityToFollow.transform.position) < 3)
                     {
-                        if (entityToFollow.type == EntityType.Player)
+                        if (entityToFollow.potionsCount == 0)
                         {
-                            isInfected = true;
-                            player.isHealed = false;
+                            if (entityToFollow.type == EntityType.Player)
+                            {
+                                isInfected = true;
+                                player.isHealed = false;
+                            }
+                            else
+                            {
+                                EntityInfectEntity(zombie, entityToFollow);
+                            }
                         }
                         else
                         {
-                            EntityInfectEntity(zombie, entityToFollow);
+                            EntityHealEntity(entityToFollow, zombie);
                         }
                     }
-                    else
-                    {
-                        EntityHealEntity(entityToFollow, zombie);
-                    }
+                }
+                else
+                {
+                    //TODO(RodjonBobjon): Random move
                 }
             }
         }
@@ -194,7 +203,8 @@ public class MyGame : MonoBehaviour
                     // Правило разделения: избегаем других зомби
                     if (distanceToNeighbor < separationDistance)
                     {
-                        separation += (e.transform.position - neighbor.transform.position).normalized / distanceToNeighbor;
+                        separation += (e.transform.position - neighbor.transform.position).normalized /
+                                      distanceToNeighbor;
                     }
 
                     alignment += neighbor.moveDirection;
@@ -215,7 +225,8 @@ public class MyGame : MonoBehaviour
             }
 
             // Итоговое направление с учётом всех правил
-            moveDirection = separation.normalized * separationDistance + alignment * alignmentWeight + cohesion * cohesionWeight;
+            moveDirection = separation.normalized * separationDistance + alignment * alignmentWeight +
+                            cohesion * cohesionWeight;
 
             // Следование за игроком (EntityToFollow) как основное поведение
             moveDirection += (entityToFollow.transform.position - e.transform.position).normalized;
@@ -294,8 +305,7 @@ public class MyGame : MonoBehaviour
 
             // Вычисляем расстояние до игрока
             distanceToPlayer = Vector3.Distance(randomPosition, player.transform.position);
-        }
-        while (distanceToPlayer < minimumDistance); // Повторяем, пока позиция слишком близка к игроку
+        } while (distanceToPlayer < minimumDistance); // Повторяем, пока позиция слишком близка к игроку
 
         // Создаем зомби
         Entity result = Instantiate(prefab, randomPosition, Quaternion.identity);
@@ -362,12 +372,11 @@ public class MyGame : MonoBehaviour
                     inputEnabled = !inputEnabled;
                     inputDisableTimer = 3f;
                 }
-
             }
-            else if (!hasFallen)
+            else
             {
+                player.isDeath = true;
                 EnableFall();
-
                 // TODO(sqd): Ragdoll
             }
         }
@@ -385,23 +394,14 @@ public class MyGame : MonoBehaviour
             infectTimerT = 10f;
         }
     }
-    public bool hasFallen = false;
-
-
 
     public void EnableFall()
     {
-        player.GetComponent<Rigidbody>().isKinematic = false;
-        player.GetComponent<Rigidbody>().useGravity = true;
-        player.GetComponent<Rigidbody>().AddForce(Vector3.back * 5f, ForceMode.Impulse);
-        player.GetComponent<AudioSource>().clip = player.deathSound;
-        player.GetComponent<AudioSource>().Play();
-        hasFallen = true;
-
+        if (!player.DeathAudioSource.isPlaying)
+        {
+            player.DeathAudioSource.Play();
+        }
     }
-
-
-
 
     public static KeyCode[] inputKeys = new[] { KeyCode.W, KeyCode.A, KeyCode.S, KeyCode.D, KeyCode.E, KeyCode.Q };
     public static KeyCode[] infectedKeys;
@@ -466,6 +466,7 @@ public class MyGame : MonoBehaviour
             player.transform.Rotate(0, -rotationY, 0);
         }
     }
+
     public void NewInfectedInput()
     {
         player.speed = 15f;
